@@ -60,8 +60,8 @@ function MoviesPage() {
   const [selectedShow, setSelectedShow] = useState(null)
   const visibleShows = shows.slice(0, visibleCount)
   const hasMoreShows = visibleCount < shows.length
-  const isSearchMode = searchTerm.trim().length > 0
   const searchQuery = searchTerm.trim()
+  const isSearchMode = Boolean(searchQuery)
   const closeModal = useCallback(() => setSelectedShow(null), [])
   const statusAnnouncement = isSearchMode
     ? isSearching

@@ -4,6 +4,15 @@ import { HiOutlinePhotograph, HiX } from 'react-icons/hi'
 import { getShowById } from '../../services/tvmaze'
 import { formatReleaseDate } from '../../utils/date'
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
+
 function cleanSummary(summary) {
   if (!summary) return 'No summary is available for this show.'
 
@@ -21,10 +30,10 @@ function getSafeExternalUrl(url) {
 }
 
 function MovieModal({ show, onClose }) {
-  const [details, setDetails] = useState(null)
+  const [showDetails, setShowDetails] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const [posterFailed, setPosterFailed] = useState(false)
+  const [hasPosterLoadError, setHasPosterLoadError] = useState(false)
   const dialogRef = useRef(null)
   const previouslyFocusedElementRef = useRef(null)
   const dialogTitleId = useId()
@@ -32,14 +41,6 @@ function MovieModal({ show, onClose }) {
   useEffect(() => {
     const controller = new AbortController()
     const previousOverflow = document.body.style.overflow
-    const focusableSelector = [
-      'a[href]',
-      'button:not([disabled])',
-      'input:not([disabled])',
-      'select:not([disabled])',
-      'textarea:not([disabled])',
-      '[tabindex]:not([tabindex="-1"])',
-    ].join(', ')
 
     previouslyFocusedElementRef.current = document.activeElement
 
@@ -54,7 +55,7 @@ function MovieModal({ show, onClose }) {
       if (event.key !== 'Tab') return
 
       const dialog = dialogRef.current
-      const focusableElements = dialog?.querySelectorAll(focusableSelector)
+      const focusableElements = dialog?.querySelectorAll(FOCUSABLE_SELECTOR)
 
       if (!dialog || !focusableElements?.length) {
         event.preventDefault()
@@ -83,11 +84,11 @@ function MovieModal({ show, onClose }) {
     async function loadDetails() {
       setIsLoading(true)
       setError('')
-      setPosterFailed(false)
+      setHasPosterLoadError(false)
 
       try {
         const data = await getShowById(show.id, controller.signal)
-        setDetails(data)
+        setShowDetails(data)
       } catch (fetchError) {
         if (fetchError.name !== 'AbortError') {
           setError(fetchError.message || 'Unable to load show details. Please try again.')
@@ -113,11 +114,11 @@ function MovieModal({ show, onClose }) {
     }
   }, [show.id, onClose])
 
-  const selectedShow = details || show
-  const posterUrl = selectedShow.image?.original || selectedShow.image?.medium
-  const hasPoster = posterUrl && !posterFailed
-  const runtime = selectedShow.runtime ?? selectedShow.averageRuntime
-  const officialSiteUrl = getSafeExternalUrl(selectedShow.officialSite)
+  const displayedShow = showDetails || show
+  const posterUrl = displayedShow.image?.original || displayedShow.image?.medium
+  const hasPoster = posterUrl && !hasPosterLoadError
+  const runtime = displayedShow.runtime ?? displayedShow.averageRuntime
+  const officialSiteUrl = getSafeExternalUrl(displayedShow.officialSite)
 
   return (
     <div
@@ -181,9 +182,9 @@ function MovieModal({ show, onClose }) {
                   {hasPoster ? (
                     <img
                       src={posterUrl}
-                      alt={`${selectedShow.name} poster`}
+                      alt={`${displayedShow.name} poster`}
                       className="size-full object-cover"
-                      onError={() => setPosterFailed(true)}
+                      onError={() => setHasPosterLoadError(true)}
                     />
                   ) : (
                     <div className="flex size-full flex-col items-center justify-center gap-3 px-6 text-center text-slate-400">
@@ -196,18 +197,18 @@ function MovieModal({ show, onClose }) {
 
               <div>
                 <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-                  {selectedShow.name || 'Untitled show'}
+                  {displayedShow.name || 'Untitled show'}
                 </h2>
                 <div className="mt-5 grid grid-cols-1 gap-3 text-sm text-slate-300 sm:grid-cols-2">
                   <p className="flex items-center gap-2">
                     <FaRegStar className="text-amber-400" aria-hidden="true" />
-                    <span>Rating: {selectedShow.rating?.average ?? 'Not rated'}</span>
+                    <span>Rating: {displayedShow.rating?.average ?? 'Not rated'}</span>
                   </p>
                   <p className="flex items-center gap-2">
                     <FaCalendarAlt className="text-amber-400" aria-hidden="true" />
                     <span>
                       Premiered:{' '}
-                      {formatReleaseDate(selectedShow.premiered, {
+                      {formatReleaseDate(displayedShow.premiered, {
                         fallback: 'Not available',
                         format: 'long',
                       })}
@@ -219,16 +220,16 @@ function MovieModal({ show, onClose }) {
                   </p>
                   <p className="flex items-center gap-2">
                     <FaGlobe className="text-amber-400" aria-hidden="true" />
-                    <span>Language: {selectedShow.language || 'Not available'}</span>
+                    <span>Language: {displayedShow.language || 'Not available'}</span>
                   </p>
-                  <p className="sm:col-span-2">Status: {selectedShow.status || 'Not available'}</p>
+                  <p className="sm:col-span-2">Status: {displayedShow.status || 'Not available'}</p>
                 </div>
 
                 <div className="mt-6">
                   <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-400">Genres</h3>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {selectedShow.genres?.length ? (
-                      selectedShow.genres.map((genre) => (
+                    {displayedShow.genres?.length ? (
+                      displayedShow.genres.map((genre) => (
                         <span key={genre} className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-200">
                           {genre}
                         </span>
@@ -242,7 +243,7 @@ function MovieModal({ show, onClose }) {
                 <div className="mt-6">
                   <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-400">Overview</h3>
                   <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-300">
-                    {cleanSummary(selectedShow.summary)}
+                    {cleanSummary(displayedShow.summary)}
                   </p>
                 </div>
 

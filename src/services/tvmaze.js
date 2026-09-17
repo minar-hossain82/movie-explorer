@@ -45,4 +45,4 @@ async function getShowById(showId, signal) {
   )
 }
 
-export { TVMAZE_BASE_URL, getShows, searchShows, getShowById }
+export { getShows, searchShows, getShowById }
