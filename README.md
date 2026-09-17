@@ -10,7 +10,6 @@
 <p>
   <a href="https://minar-movie-explorer.vercel.app/">🌐 Live Demo</a>
   &nbsp; • &nbsp;
-  <a href="https://github.com/minar-hossain82/movie-explorer">💻 GitHub</a>
 </p>
 
 </div>
@@ -347,26 +346,6 @@ npm run preview
   <li>✅ Vercel deployment</li>
 </ul>
 
-<h2>📸 Screenshots</h2>
-
-<h3>Home Page</h3>
-
-<p>
-  Add your Home Page screenshot here.
-</p>
-
-<h3>Movies Page</h3>
-
-<p>
-  Add your Movies Page screenshot here.
-</p>
-
-<h3>Movie Details</h3>
-
-<p>
-  Add your Movie Details modal screenshot here.
-</p>
-
 <h2>📚 What I Learned</h2>
 
 <ul>
@@ -396,11 +375,9 @@ npm run preview
 </p>
 
 <p>
-  <a href="https://github.com/minar-hossain82">GitHub</a>
-  •
-  <a href="https://minar-portfolio.vercel.app/">Portfolio</a>
-  •
-  <a href="https://leetcode.com/u/minar-hossain/">LeetCode</a>
+  <a href="https://minar-portfolio.vercel.app/">🌐 Portfolio</a>
+  &nbsp; • &nbsp;
+  <a href="https://leetcode.com/u/minar-hossain/">🧩 LeetCode</a>
 </p>
 
 <h2>📄 License</h2>
@@ -414,7 +391,5 @@ npm run preview
 <div align="center">
 
 <p>Made with ❤️ using React.js</p>
-
-<p>⭐ If you find this project useful, consider giving it a star!</p>
 
 </div>
