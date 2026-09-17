@@ -1,21 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { FaCalendarAlt, FaExternalLinkAlt, FaGlobe, FaRegClock, FaRegStar } from 'react-icons/fa'
 import { HiOutlinePhotograph, HiX } from 'react-icons/hi'
 import { getShowById } from '../../services/tvmaze'
-
-function formatReleaseDate(date) {
-  if (!date) return 'Not available'
-
-  const formattedDate = new Date(`${date}T00:00:00`)
-
-  if (Number.isNaN(formattedDate.getTime())) return date
-
-  return formattedDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
+import { formatReleaseDate } from '../../utils/date'
 
 function cleanSummary(summary) {
   if (!summary) return 'No summary is available for this show.'
@@ -23,20 +10,74 @@ function cleanSummary(summary) {
   return summary.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+function getSafeExternalUrl(url) {
+  try {
+    const parsedUrl = new URL(url)
+
+    return ['http:', 'https:'].includes(parsedUrl.protocol) ? parsedUrl.href : null
+  } catch {
+    return null
+  }
+}
+
 function MovieModal({ show, onClose }) {
   const [details, setDetails] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [posterFailed, setPosterFailed] = useState(false)
+  const dialogRef = useRef(null)
+  const previouslyFocusedElementRef = useRef(null)
+  const dialogTitleId = useId()
 
   useEffect(() => {
     const controller = new AbortController()
     const previousOverflow = document.body.style.overflow
+    const focusableSelector = [
+      'a[href]',
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(', ')
+
+    previouslyFocusedElementRef.current = document.activeElement
 
     document.body.style.overflow = 'hidden'
 
     function handleKeyDown(event) {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab') return
+
+      const dialog = dialogRef.current
+      const focusableElements = dialog?.querySelectorAll(focusableSelector)
+
+      if (!dialog || !focusableElements?.length) {
+        event.preventDefault()
+        dialog?.focus()
+        return
+      }
+
+      const firstFocusableElement = focusableElements[0]
+      const lastFocusableElement = focusableElements[focusableElements.length - 1]
+
+      if (
+        event.shiftKey &&
+        (document.activeElement === firstFocusableElement || !dialog.contains(document.activeElement))
+      ) {
+        event.preventDefault()
+        lastFocusableElement.focus()
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === lastFocusableElement || !dialog.contains(document.activeElement))
+      ) {
+        event.preventDefault()
+        firstFocusableElement.focus()
+      }
     }
 
     async function loadDetails() {
@@ -58,11 +99,17 @@ function MovieModal({ show, onClose }) {
 
     loadDetails()
     window.addEventListener('keydown', handleKeyDown)
+    const focusTimer = window.requestAnimationFrame(() => dialogRef.current?.focus())
 
     return () => {
       controller.abort()
       window.removeEventListener('keydown', handleKeyDown)
+      window.cancelAnimationFrame(focusTimer)
       document.body.style.overflow = previousOverflow
+
+      if (previouslyFocusedElementRef.current instanceof HTMLElement) {
+        previouslyFocusedElementRef.current.focus()
+      }
     }
   }, [show.id, onClose])
 
@@ -70,6 +117,7 @@ function MovieModal({ show, onClose }) {
   const posterUrl = selectedShow.image?.original || selectedShow.image?.medium
   const hasPoster = posterUrl && !posterFailed
   const runtime = selectedShow.runtime ?? selectedShow.averageRuntime
+  const officialSiteUrl = getSafeExternalUrl(selectedShow.officialSite)
 
   return (
     <div
@@ -80,13 +128,20 @@ function MovieModal({ show, onClose }) {
       }}
     >
       <section
+        ref={dialogRef}
         className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/60"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="movie-modal-title"
+        aria-labelledby={dialogTitleId}
+        tabIndex={-1}
       >
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-7">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">Show details</p>
+          <p
+            id={dialogTitleId}
+            className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300"
+          >
+            Show details
+          </p>
           <button
             type="button"
             className="grid size-10 place-items-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-300"
@@ -106,7 +161,7 @@ function MovieModal({ show, onClose }) {
 
         {!isLoading && error && (
           <div className="flex min-h-80 flex-col items-center justify-center p-8 text-center">
-            <h2 id="movie-modal-title" className="text-xl font-bold text-white">Details unavailable</h2>
+            <h2 className="text-xl font-bold text-white">Details unavailable</h2>
             <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">{error}</p>
             <button
               type="button"
@@ -140,7 +195,7 @@ function MovieModal({ show, onClose }) {
               </div>
 
               <div>
-                <h2 id="movie-modal-title" className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
                   {selectedShow.name || 'Untitled show'}
                 </h2>
                 <div className="mt-5 grid grid-cols-1 gap-3 text-sm text-slate-300 sm:grid-cols-2">
@@ -150,7 +205,13 @@ function MovieModal({ show, onClose }) {
                   </p>
                   <p className="flex items-center gap-2">
                     <FaCalendarAlt className="text-amber-400" aria-hidden="true" />
-                    <span>Premiered: {formatReleaseDate(selectedShow.premiered)}</span>
+                    <span>
+                      Premiered:{' '}
+                      {formatReleaseDate(selectedShow.premiered, {
+                        fallback: 'Not available',
+                        format: 'long',
+                      })}
+                    </span>
                   </p>
                   <p className="flex items-center gap-2">
                     <FaRegClock className="text-amber-400" aria-hidden="true" />
@@ -185,9 +246,9 @@ function MovieModal({ show, onClose }) {
                   </p>
                 </div>
 
-                {selectedShow.officialSite && (
+                {officialSiteUrl && (
                   <a
-                    href={selectedShow.officialSite}
+                    href={officialSiteUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="mt-7 inline-flex items-center gap-2 rounded-lg border border-amber-300/40 px-4 py-2.5 text-sm font-semibold text-amber-200 transition hover:bg-amber-400 hover:text-slate-950"

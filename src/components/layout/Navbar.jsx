@@ -48,14 +48,22 @@ function Navbar() {
           className="grid size-10 place-items-center rounded-lg text-slate-200 transition hover:bg-white/10 md:hidden"
           aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMenuOpen}
+          aria-controls="mobile-navigation"
           onClick={() => setIsMenuOpen((current) => !current)}
         >
-          {isMenuOpen ? <HiX className="size-6" /> : <HiMenuAlt3 className="size-6" />}
+          {isMenuOpen ? (
+            <HiX className="size-6" aria-hidden="true" />
+          ) : (
+            <HiMenuAlt3 className="size-6" aria-hidden="true" />
+          )}
         </button>
       </nav>
 
       {isMenuOpen && (
-        <div className="border-t border-white/10 bg-slate-950 px-5 py-4 md:hidden">
+        <div
+          id="mobile-navigation"
+          className="border-t border-white/10 bg-slate-950 px-5 py-4 md:hidden"
+        >
           <div className="mx-auto flex max-w-7xl flex-col gap-1">
             {navigationLinks.map((link) => (
               <NavLink

@@ -1,20 +1,7 @@
 import { useState } from 'react'
 import { FaCalendarAlt, FaRegStar } from 'react-icons/fa'
 import { HiOutlinePhotograph } from 'react-icons/hi'
-
-function formatReleaseDate(date) {
-  if (!date) return 'Release date unavailable'
-
-  const formattedDate = new Date(`${date}T00:00:00`)
-
-  if (Number.isNaN(formattedDate.getTime())) return date
-
-  return formattedDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
+import { formatReleaseDate } from '../../utils/date'
 
 function MovieCard({ show, onViewDetails }) {
   const [posterFailed, setPosterFailed] = useState(false)
@@ -49,7 +36,9 @@ function MovieCard({ show, onViewDetails }) {
         <div className="mt-4 flex items-center justify-between gap-3 text-sm">
           <span className="flex min-w-0 items-center gap-2 text-slate-400">
             <FaCalendarAlt className="shrink-0 text-amber-400" aria-hidden="true" />
-            <span className="truncate">{formatReleaseDate(show.premiered)}</span>
+            <span className="truncate">
+              {formatReleaseDate(show.premiered, { fallback: 'Release date unavailable' })}
+            </span>
           </span>
           <span className="flex shrink-0 items-center gap-1.5 font-semibold text-amber-300">
             <FaRegStar aria-hidden="true" />

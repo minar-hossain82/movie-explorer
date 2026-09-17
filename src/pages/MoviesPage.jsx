@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { FaExclamationTriangle, FaSearch } from 'react-icons/fa'
 import { HiOutlineFilm, HiPlus, HiRefresh } from 'react-icons/hi'
 import MovieCard from '../components/movies/MovieCard'
@@ -8,6 +8,43 @@ import Navbar from '../components/layout/Navbar'
 import { getShows, searchShows } from '../services/tvmaze'
 
 const SHOWS_PER_PAGE = 12
+
+function LoadingState({ message }) {
+  return (
+    <div className="flex min-h-72 flex-col items-center justify-center gap-4 text-slate-400">
+      <span className="size-10 animate-spin rounded-full border-4 border-slate-700 border-t-amber-400" />
+      <p>{message}</p>
+    </div>
+  )
+}
+
+function ErrorState({ title, message, onRetry }) {
+  return (
+    <div className="mx-auto flex min-h-72 max-w-lg flex-col items-center justify-center rounded-2xl border border-red-400/20 bg-red-400/5 p-8 text-center">
+      <FaExclamationTriangle className="size-9 text-red-300" aria-hidden="true" />
+      <h2 className="mt-4 text-xl font-bold text-white">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{message}</p>
+      <button
+        type="button"
+        className="mt-6 inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300"
+        onClick={onRetry}
+      >
+        <HiRefresh className="size-5" aria-hidden="true" />
+        Try again
+      </button>
+    </div>
+  )
+}
+
+function EmptyState({ title, message }) {
+  return (
+    <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/50 p-8 text-center">
+      <HiOutlineFilm className="size-12 text-slate-600" aria-hidden="true" />
+      <h2 className="mt-4 text-xl font-bold">{title}</h2>
+      <p className="mt-2 text-sm text-slate-400">{message}</p>
+    </div>
+  )
+}
 
 function MoviesPage() {
   const [shows, setShows] = useState([])
@@ -24,6 +61,19 @@ function MoviesPage() {
   const visibleShows = shows.slice(0, visibleCount)
   const hasMoreShows = visibleCount < shows.length
   const isSearchMode = searchTerm.trim().length > 0
+  const searchQuery = searchTerm.trim()
+  const closeModal = useCallback(() => setSelectedShow(null), [])
+  const statusAnnouncement = isSearchMode
+    ? isSearching
+      ? `Searching for ${searchQuery}.`
+      : searchError
+        ? 'Search unavailable.'
+        : `${searchResults.length} search result${searchResults.length === 1 ? '' : 's'} found.`
+    : isLoading
+      ? 'Loading shows.'
+      : error
+        ? 'Shows unavailable.'
+        : `${shows.length} shows available.`
 
   useEffect(() => {
     const controller = new AbortController()
@@ -120,35 +170,27 @@ function MoviesPage() {
         </section>
 
         <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-12">
+          <p className="sr-only" aria-live="polite" aria-atomic="true">
+            {statusAnnouncement}
+          </p>
+
           {!isSearchMode && isLoading && (
-            <div className="flex min-h-72 flex-col items-center justify-center gap-4 text-slate-400">
-              <span className="size-10 animate-spin rounded-full border-4 border-slate-700 border-t-amber-400" />
-              <p>Loading shows...</p>
-            </div>
+            <LoadingState message="Loading shows..." />
           )}
 
           {!isSearchMode && !isLoading && error && (
-            <div className="mx-auto flex min-h-72 max-w-lg flex-col items-center justify-center rounded-2xl border border-red-400/20 bg-red-400/5 p-8 text-center">
-              <FaExclamationTriangle className="size-9 text-red-300" aria-hidden="true" />
-              <h2 className="mt-4 text-xl font-bold text-white">Something went wrong</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{error}</p>
-              <button
-                type="button"
-                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300"
-                onClick={() => setRetryKey((current) => current + 1)}
-              >
-                <HiRefresh className="size-5" aria-hidden="true" />
-                Try again
-              </button>
-            </div>
+            <ErrorState
+              title="Something went wrong"
+              message={error}
+              onRetry={() => setRetryKey((current) => current + 1)}
+            />
           )}
 
           {!isSearchMode && !isLoading && !error && shows.length === 0 && (
-            <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/50 p-8 text-center">
-              <HiOutlineFilm className="size-12 text-slate-600" aria-hidden="true" />
-              <h2 className="mt-4 text-xl font-bold">No shows available</h2>
-              <p className="mt-2 text-sm text-slate-400">Please check back again shortly.</p>
-            </div>
+            <EmptyState
+              title="No shows available"
+              message="Please check back again shortly."
+            />
           )}
 
           {!isSearchMode && !isLoading && !error && shows.length > 0 && (
@@ -175,36 +217,22 @@ function MoviesPage() {
           )}
 
           {isSearchMode && isSearching && (
-            <div className="flex min-h-72 flex-col items-center justify-center gap-4 text-slate-400">
-              <span className="size-10 animate-spin rounded-full border-4 border-slate-700 border-t-amber-400" />
-              <p>Searching for &quot;{searchTerm.trim()}&quot;...</p>
-            </div>
+            <LoadingState message={`Searching for "${searchQuery}"...`} />
           )}
 
           {isSearchMode && !isSearching && searchError && (
-            <div className="mx-auto flex min-h-72 max-w-lg flex-col items-center justify-center rounded-2xl border border-red-400/20 bg-red-400/5 p-8 text-center">
-              <FaExclamationTriangle className="size-9 text-red-300" aria-hidden="true" />
-              <h2 className="mt-4 text-xl font-bold text-white">Search unavailable</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{searchError}</p>
-              <button
-                type="button"
-                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300"
-                onClick={() => setSearchRetryKey((current) => current + 1)}
-              >
-                <HiRefresh className="size-5" aria-hidden="true" />
-                Try again
-              </button>
-            </div>
+            <ErrorState
+              title="Search unavailable"
+              message={searchError}
+              onRetry={() => setSearchRetryKey((current) => current + 1)}
+            />
           )}
 
           {isSearchMode && !isSearching && !searchError && searchResults.length === 0 && (
-            <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/50 p-8 text-center">
-              <HiOutlineFilm className="size-12 text-slate-600" aria-hidden="true" />
-              <h2 className="mt-4 text-xl font-bold">No shows found</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                Try a different title or check the spelling.
-              </p>
-            </div>
+            <EmptyState
+              title="No shows found"
+              message="Try a different title or check the spelling."
+            />
           )}
 
           {isSearchMode && !isSearching && !searchError && searchResults.length > 0 && (
@@ -219,7 +247,7 @@ function MoviesPage() {
 
       <Footer />
 
-      {selectedShow && <MovieModal show={selectedShow} onClose={() => setSelectedShow(null)} />}
+      {selectedShow && <MovieModal show={selectedShow} onClose={closeModal} />}
     </div>
   )
 }
